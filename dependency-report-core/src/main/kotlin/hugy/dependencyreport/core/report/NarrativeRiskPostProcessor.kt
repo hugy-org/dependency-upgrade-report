@@ -1,0 +1,32 @@
+package hugy.dependencyreport.core.report
+
+import hugy.dependencyreport.core.fetch.VersionSelection
+import hugy.dependencyreport.core.model.GeneratedNarrative
+import hugy.dependencyreport.core.model.RiskAssessment
+import hugy.dependencyreport.core.model.RiskLevel
+import hugy.dependencyreport.core.model.UpgradeTarget
+
+class NarrativeRiskPostProcessor {
+    fun apply(target: UpgradeTarget, narrative: GeneratedNarrative): GeneratedNarrative {
+        val previous = VersionSelection.parse(target.change.previousVersion)
+        val current = VersionSelection.parse(target.change.currentVersion)
+        val majorChanged = previous != null && current != null &&
+            previous.coreParts.getOrElse(0) { 0 } != current.coreParts.getOrElse(0) { 0 }
+
+        if (!majorChanged) {
+            return narrative
+        }
+
+        val upgradedRisk = if (narrative.riskAssessment.level == RiskLevel.HIGH) {
+            narrative.riskAssessment
+        } else {
+            RiskAssessment(
+                level = RiskLevel.HIGH,
+                summary = "Major version upgrade detected; treat as high risk even if the source summary appears otherwise moderate.",
+                signals = narrative.riskAssessment.signals + "major-version-upgrade",
+            )
+        }
+
+        return narrative.copy(riskAssessment = upgradedRisk)
+    }
+}

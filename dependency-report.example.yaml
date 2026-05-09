@@ -1,16 +1,35 @@
-sourceRegistry: []
-githubRepositories:
-  - alias: kotlin
-    repository: JetBrains/kotlin
-  - pluginId: com.github.ben-manes.versions
-    repository: ben-manes/gradle-versions-plugin
-changelogUrls:
-  - module: org.jetbrains.kotlin:kotlin-bom
-    url: https://kotlinlang.org/docs/releases.html
+sources:
+  - match:
+      alias: kotlin
+    githubRepo: JetBrains/kotlin
+  - match:
+      module: org.jetbrains.kotlin:kotlin-bom
+    changelogUrl: https://kotlinlang.org/docs/releases.html
+  - match:
+      alias: google-api-services-gmail
+    changelogUrl: https://developers.google.com/workspace/gmail/release-notes
+    linkOnly: true
+
 github:
   token: null
   apiBaseUrl: https://api.github.com
   maxReleases: 5
+  pageSize: 20
   maxScanReleases: 100
+  includePrereleases: false
+
+fetch:
+  maxDocumentContentChars: 12000
+
+inference:
+  enabled: true
+  mavenRepositoryBaseUrl: https://repo1.maven.org/maven2
+
 llm:
-  mode: static
+  mode: disabled
+  model: openai/gpt-4.1-mini
+  apiKey: your-openrouter-api-key
+  baseUrl: https://openrouter.ai/api/v1/chat/completions
+  retryCount: 3
+  retryDelayMs: 750
+  requestTimeoutMs: 45000

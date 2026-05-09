@@ -26,7 +26,15 @@ data class VersionAliasChange(
     val alias: String,
     val previousVersion: String,
     val currentVersion: String,
+    val classification: VersionChangeClassification = VersionChangeClassification.UNKNOWN,
 )
+
+enum class VersionChangeClassification {
+    UPGRADE,
+    DOWNGRADE,
+    SAME,
+    UNKNOWN,
+}
 
 enum class UsageType {
     LIBRARY,
@@ -74,6 +82,8 @@ data class ReleaseSourceResolution(
     val source: ReleaseSource,
     val matchedBy: String,
     val warnings: List<String> = emptyList(),
+    val provenance: List<String> = emptyList(),
+    val linkOnly: Boolean = false,
 )
 
 data class FetchedDocument(
@@ -81,6 +91,8 @@ data class FetchedDocument(
     val sourceUrl: String,
     val content: String,
     val version: String? = null,
+    val contentTruncated: Boolean = false,
+    val originalContentLength: Int = content.length,
 )
 
 enum class RiskLevel {
@@ -99,7 +111,7 @@ data class RiskAssessment(
 data class GeneratedNarrative(
     val headline: String,
     val summary: String,
-    val reviewerChecklist: List<String>,
+    val description: String = summary,
     val riskAssessment: RiskAssessment,
 )
 
@@ -121,16 +133,13 @@ data class ExecutionManifest(
 )
 
 data class RenderedOutputs(
-    val summaryText: String,
     val commitBody: String,
-    val mergeRequestDescription: String,
-    val jiraDescription: String,
-    val reviewerChecklist: String,
-    val riskSummary: String,
+    val unifiedDescription: String,
 )
 
 data class GeneratedReport(
     val entries: List<UpgradeReportEntry>,
     val outputs: RenderedOutputs,
     val manifest: ExecutionManifest,
+    val warnings: List<String> = emptyList(),
 )

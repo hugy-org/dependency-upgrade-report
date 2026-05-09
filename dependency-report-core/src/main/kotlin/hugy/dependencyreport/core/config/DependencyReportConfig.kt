@@ -1,49 +1,51 @@
 package hugy.dependencyreport.core.config
 
 data class DependencyReportConfig(
-    val sourceRegistry: List<KnownSourceDefinition> = emptyList(),
-    val githubRepositories: List<GitHubRepositoryMapping> = emptyList(),
-    val changelogUrls: List<ChangelogUrlMapping> = emptyList(),
+    val sources: List<SourceDefinition> = emptyList(),
     val github: GitHubConfig = GitHubConfig(),
+    val fetch: FetchConfig = FetchConfig(),
+    val inference: InferenceConfig = InferenceConfig(),
     val llm: LlmConfig = LlmConfig(),
 )
 
-data class KnownSourceDefinition(
-    val alias: String? = null,
-    val module: String? = null,
-    val pluginId: String? = null,
-    val type: KnownSourceType,
-    val url: String? = null,
-    val repository: String? = null,
+data class SourceDefinition(
+    val match: SourceMatch,
+    val githubRepo: String? = null,
+    val changelogUrl: String? = null,
     val displayName: String? = null,
+    val linkOnly: Boolean = false,
 )
 
-enum class KnownSourceType {
-    GITHUB_RELEASES,
-    CHANGELOG_URL,
-}
-
-data class GitHubRepositoryMapping(
+data class SourceMatch(
     val alias: String? = null,
     val module: String? = null,
     val pluginId: String? = null,
-    val repository: String,
-)
-
-data class ChangelogUrlMapping(
-    val alias: String? = null,
-    val module: String? = null,
-    val pluginId: String? = null,
-    val url: String,
 )
 
 data class GitHubConfig(
     val token: String? = null,
     val apiBaseUrl: String = "https://api.github.com",
     val maxReleases: Int = 5,
+    val pageSize: Int = 20,
     val maxScanReleases: Int = 100,
+    val includePrereleases: Boolean = false,
+)
+
+data class FetchConfig(
+    val maxDocumentContentChars: Int = 12_000,
+)
+
+data class InferenceConfig(
+    val enabled: Boolean = true,
+    val mavenRepositoryBaseUrl: String = "https://repo1.maven.org/maven2",
 )
 
 data class LlmConfig(
     val mode: String = "disabled",
+    val model: String? = null,
+    val apiKey: String? = null,
+    val baseUrl: String = "https://openrouter.ai/api/v1/chat/completions",
+    val retryCount: Int = 3,
+    val retryDelayMs: Long = 750,
+    val requestTimeoutMs: Long = 45_000,
 )

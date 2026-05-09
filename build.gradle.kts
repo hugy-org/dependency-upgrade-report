@@ -15,7 +15,9 @@ subprojects {
     }
 
     dependencies {
+        "implementation"("io.github.oshai:kotlin-logging-jvm:7.0.3")
         "testImplementation"(kotlin("test"))
+        "testRuntimeOnly"("ch.qos.logback:logback-classic:1.5.18")
     }
 
     tasks.withType<Test>().configureEach {

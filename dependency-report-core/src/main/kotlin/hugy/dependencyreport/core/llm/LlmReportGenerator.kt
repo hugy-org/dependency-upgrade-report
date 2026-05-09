@@ -30,14 +30,12 @@ class StaticLlmReportGenerator : LlmReportGenerator {
     override fun generate(request: LlmReportRequest): LlmGenerationResult {
         val target = request.target
         val titles = request.documents.joinToString { it.title }
+        val baseSummary = "Summarized from ${request.documents.size} fetched document(s): $titles."
         return LlmGenerationResult.Success(
             GeneratedNarrative(
                 headline = "${target.change.alias}: ${target.change.previousVersion} -> ${target.change.currentVersion}",
-                summary = "Summarized from ${request.documents.size} fetched document(s): $titles.",
-                reviewerChecklist = listOf(
-                    "Review release notes for behavior changes.",
-                    "Validate dependency usages mapped to this alias.",
-                ),
+                summary = baseSummary,
+                description = baseSummary,
                 riskAssessment = RiskAssessment(
                     level = RiskLevel.MEDIUM,
                     summary = "Static adapter marked this upgrade as medium risk pending human review.",
