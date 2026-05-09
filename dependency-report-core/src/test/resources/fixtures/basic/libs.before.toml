@@ -1,0 +1,10 @@
+[versions]
+kotlin = "1.9.24"
+versionsPlugin = "0.50.0"
+
+[libraries]
+kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
+kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
+
+[plugins]
+versions = { id = "com.github.ben-manes.versions", version.ref = "versionsPlugin" }

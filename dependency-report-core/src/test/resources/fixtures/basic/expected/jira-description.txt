@@ -1,0 +1,6 @@
+Dependency upgrade review
+
+* kotlin: 1.9.24 -> 2.0.0
+  Summarized from 1 fetched document(s): Kotlin 2.0.0.
+* versionsPlugin: 0.50.0 -> 0.51.0
+  Summarized from 1 fetched document(s): Gradle Versions 0.51.0.

@@ -1,0 +1,10 @@
+Dependency Upgrade Summary
+
+- kotlin: 1.9.24 -> 2.0.0
+  Kind: MIXED
+  Source: GITHUB_RELEASES via githubRepositories
+  Risk: MEDIUM
+- versionsPlugin: 0.50.0 -> 0.51.0
+  Kind: GRADLE_PLUGIN
+  Source: GITHUB_RELEASES via githubRepositories
+  Risk: MEDIUM
