@@ -1,16 +1,37 @@
-sourceRegistry: []
-githubRepositories:
-  - alias: kotlin
-    repository: JetBrains/kotlin
-  - pluginId: com.github.ben-manes.versions
-    repository: ben-manes/gradle-versions-plugin
-changelogUrls:
-  - module: org.jetbrains.kotlin:kotlin-bom
-    url: https://kotlinlang.org/docs/releases.html
+sources:
+  - match:
+      alias: kotlin # Match a changed version alias from [versions].
+    githubRepo: JetBrains/kotlin # GitHub repository used for release fetching.
+  - match:
+      module: org.jetbrains.kotlin:kotlin-bom # Match a resolved Maven module usage.
+    changelogUrl: https://kotlinlang.org/docs/releases.html # Explicit changelog URL to fetch.
+  - match:
+      alias: google-api-services-gmail # Match a changed version alias from [versions].
+    changelogUrl: https://developers.google.com/workspace/gmail/release-notes # Reference URL shown in outputs.
+    linkOnly: true # Skip fetching/LLM and keep only the link in outputs.
+
 github:
-  token: null
-  apiBaseUrl: https://api.github.com
-  maxReleases: 5
-  maxScanReleases: 100
+  token: null # Optional GitHub token for higher API rate limits.
+  apiBaseUrl: https://api.github.com # GitHub API base URL.
+  maxReleases: 5 # Max selected release notes kept for one dependency.
+  pageSize: 20 # Releases requested per GitHub API page.
+  maxScanReleases: 100 # Hard cap on scanned GitHub releases across pages.
+  includePrereleases: false # Allow RC/beta releases to fill missing release slots.
+
+fetch:
+  maxDocumentContentChars: 12000 # Max stored characters per fetched document.
+
+inference:
+  enabled: true # Enable Maven POM-based source inference.
+  mavenRepositoryBaseUrl: https://repo1.maven.org/maven2 # Maven repository used for POM lookup.
+
 llm:
-  mode: static
+  mode: static # Use 'static' for deterministic summaries or 'openrouter' for LLM enrichment.
+  model: openai/gpt-4.1-mini # Model name for OpenRouter mode.
+  # Optional local override. Prefer apiKeyEnv in CI.
+  # apiKey: your-openrouter-api-key
+  apiKeyEnv: OPENROUTER_API_KEY # Environment variable name holding the OpenRouter API key.
+  baseUrl: https://openrouter.ai/api/v1/chat/completions # OpenRouter chat completions endpoint.
+  retryCount: 3 # Retry count for transient OpenRouter failures.
+  retryDelayMs: 750 # Delay between OpenRouter retries in milliseconds.
+  requestTimeoutMs: 45000 # Timeout per OpenRouter request in milliseconds.

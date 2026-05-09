@@ -1,10 +1,65 @@
 [versions]
-kotlin = "2.0.0"
-versionsPlugin = "0.51.0"
+# Language, Frameworks
+kotlin = "2.2.21"
+commons-io = "2.22.0"
+#spring-boot = "4.0.6"
+#google-api-services-gmail = "v1-rev20260428-2.0.0"
+## =================================================================================================================== #
+## Plugins
+detekt = "2.0.0-alpha.3"
 
+
+
+# best practices for naming entries: https://blog.gradle.org/best-practices-naming-version-catalog-entries
 [libraries]
-kotlin-stdlib = { module = "org.jetbrains.kotlin:kotlin-stdlib", version.ref = "kotlin" }
-kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
+google-cloud-spring-gcp-bom = { module = "com.google.cloud:spring-cloud-gcp-dependencies", version.ref = "google-cloud-spring-gcp" }
+google-cloud-libraries-bom = { module = "com.google.cloud:libraries-bom", version.ref = "google-cloud-libraries" }
+spring-boot-bom = { module = "org.springframework.boot:spring-boot-dependencies", version.ref = "spring-boot" }
+spring-cloud-bom = { module = "org.springframework.cloud:spring-cloud-dependencies", version.ref = "spring-cloud" }
+# =================================================================================================================== #
+# Misc
+arrow-bom = { module = "io.arrow-kt:arrow-stack", version.ref = "arrow" }
+azure-identity = { module = "com.azure:azure-identity", version.ref = "azure-identity" }
+gitlab-detektGitlabReport = { module = "com.gitlab.cromefire:detekt-gitlab-report", version.ref = "detekt-gitlab-report" }
+google-cloudSqlConnectorR2dbcPostgres = { module = "com.google.cloud.sql:cloud-sql-connector-r2dbc-postgres", version.ref = "cloud-sql-connector-r2dbc-postgres" }
+commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
+google-apiServicesGmail = { module = "com.google.apis:google-api-services-gmail", version.ref = "google-api-services-gmail" }
+hibernate-processor = { module = "org.hibernate.orm:hibernate-processor" }
+hypersistence-utilsHibernate71 = { module = "io.hypersistence:hypersistence-utils-hibernate-71", version.ref = "hypersistence-utils-hibernate-71" }
+javaluator = { module = "com.fathzer:javaluator", version.ref = "javaluator" }
+json-unit = { module = "net.javacrumbs.json-unit:json-unit", version.ref = "json-unit" }
+juniversalchardet = { module = "com.googlecode.juniversalchardet:juniversalchardet", version.ref = "juniversalchardet" }
+logstash-logbackEncoder = { module = "net.logstash.logback:logstash-logback-encoder", version.ref = "logstash-logback-encoder" }
+microsoft-graph = { module = "com.microsoft.graph:microsoft-graph", version.ref = "microsoft-graph" }
+mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "mockito-kotlin" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+opencsv = { module = "com.opencsv:opencsv", version.ref = "opencsv" }
+poiji = { module = "com.github.ozlerhakan:poiji", version.ref = "poiji" }
+r2dbc-migrate-springBootStarter = { module = "name.nkonev.r2dbc-migrate:r2dbc-migrate-spring-boot-starter", version.ref = "r2dbc-migrate-spring-boot-starter" }
+r2dbc-postgresql = { module = "org.postgresql:r2dbc-postgresql", version.ref = "r2dbc-postgresql" }
+shedlock-bom = { module = "net.javacrumbs.shedlock:shedlock-bom", version.ref = "shedlock" }
+spring-integrationSftp = { module = "org.springframework.integration:spring-integration-sftp", version.ref = "spring-integration-sftp" }
+springdoc-openapiStarterWebfluxUi = { module = "org.springdoc:springdoc-openapi-starter-webflux-ui", version.ref = "springdoc-openapi-starter-webflux-ui" }
+springdoc-openapiStarterWebmvcUi = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc-openapi-starter-webmvc-ui" }
+springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmockk" }
+strikt-bom = { module = "io.strikt:strikt-bom", version.ref = "strikt" }
+zip4j = { module = "net.lingala.zip4j:zip4j", version.ref = "zip4j" }
 
 [plugins]
-versions = { id = "com.github.ben-manes.versions", version.ref = "versionsPlugin" }
+java = { id = "java" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-jpa = { id = "org.jetbrains.kotlin.plugin.jpa", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+kotlin-kapt = { id = "org.jetbrains.kotlin.kapt", version.ref = "kotlin" }
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+# =================================================================================================================== #
+# Misc
+dependencyAnalysis = { id = "com.autonomousapps.dependency-analysis", version.ref = "dependency-analysis" }
+nebulaDependencyLock = { id = "com.netflix.nebula.dependency-lock", version.ref = "nebula-dependency-lock" }
+detekt = { id = "dev.detekt", version.ref = "detekt" }
+jib = { id = "com.google.cloud.tools.jib", version.ref = "jib" }
+sentry = { id = "io.sentry.jvm.gradle", version.ref = "sentry" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
+versionCatalogUpdate = { id = "nl.littlerobots.version-catalog-update", version.ref = "version-catalog-udpate" }
+
+

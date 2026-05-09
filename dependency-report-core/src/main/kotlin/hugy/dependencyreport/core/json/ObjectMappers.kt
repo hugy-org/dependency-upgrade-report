@@ -1,10 +1,11 @@
 package hugy.dependencyreport.core.json
 
-import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.databind.SerializationFeature
-import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.SerializationFeature
+import tools.jackson.module.kotlin.jsonMapper
 
 object ObjectMappers {
-    val json: ObjectMapper = jacksonObjectMapper()
-        .enable(SerializationFeature.INDENT_OUTPUT)
+    val json: ObjectMapper = jsonMapper {
+        enable(SerializationFeature.INDENT_OUTPUT)
+    }
 }

@@ -8,6 +8,8 @@ data class ParsedVersion(
     val coreParts: List<Int>,
     val suffix: String?,
 ) : Comparable<ParsedVersion> {
+    fun isStable(): Boolean = suffix == null
+
     override fun compareTo(other: ParsedVersion): Int {
         val maxSize = maxOf(coreParts.size, other.coreParts.size)
         for (index in 0 until maxSize) {
@@ -60,4 +62,59 @@ object VersionSelection {
     ): Boolean {
         return candidate > previous && candidate <= current
     }
+
+    fun <T> selectUpgradeWindowDocuments(
+        candidates: List<VersionedValue<T>>,
+        targetVersion: ParsedVersion,
+        maxReleases: Int,
+        includePrereleases: Boolean,
+    ): List<VersionedValue<T>> {
+        if (candidates.isEmpty()) return emptyList()
+        val releaseLimit = maxReleases.coerceAtLeast(1)
+        val sorted = candidates.distinctBy { it.version.normalized }.sortedBy { it.version }
+        val stable = sorted.filter { it.version.isStable() }
+        if (stable.isEmpty()) {
+            return sorted.takeLast(releaseLimit)
+        }
+
+        val selected = stable.takeLast(releaseLimit).toMutableList()
+        val targetCandidate = sorted.firstOrNull { it.version.normalized == targetVersion.normalized }
+
+        if (includePrereleases && selected.size < releaseLimit) {
+            val selectedVersions = selected.map { it.version.normalized }.toSet()
+            val prereleases = sorted.filter { !it.version.isStable() && it.version.normalized !in selectedVersions }
+            selected += prereleases.takeLast(releaseLimit - selected.size)
+        }
+
+        if (targetCandidate != null && targetCandidate.version.normalized !in selected.map { it.version.normalized }.toSet()) {
+            selected += targetCandidate
+        }
+
+        return selected.distinctBy { it.version.normalized }.sortedBy { it.version }
+    }
+
+    fun <T> hasEnoughUsefulReleaseCandidates(
+        candidates: List<VersionedValue<T>>,
+        targetVersion: ParsedVersion,
+        maxReleases: Int,
+        includePrereleases: Boolean,
+    ): Boolean {
+        val requiredCount = maxReleases.coerceAtLeast(1)
+        val distinctCandidates = candidates.distinctBy { it.version.normalized }
+        val hasTargetVersion = distinctCandidates.any { it.version.normalized == targetVersion.normalized }
+        val stableCount = distinctCandidates.count { it.version.isStable() }
+        val usefulCount = if (stableCount > 0) {
+            stableCount
+        } else if (includePrereleases) {
+            distinctCandidates.size
+        } else {
+            0
+        }
+        return hasTargetVersion && usefulCount >= requiredCount
+    }
 }
+
+data class VersionedValue<T>(
+    val version: ParsedVersion,
+    val value: T,
+)

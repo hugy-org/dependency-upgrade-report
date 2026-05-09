@@ -4,6 +4,7 @@ import hugy.dependencyreport.core.model.FetchedDocument
 import hugy.dependencyreport.core.model.GeneratedNarrative
 import hugy.dependencyreport.core.model.RiskAssessment
 import hugy.dependencyreport.core.model.RiskLevel
+import hugy.dependencyreport.core.model.UpgradeKind
 import hugy.dependencyreport.core.model.UpgradeTarget
 
 data class LlmReportRequest(
@@ -20,28 +21,36 @@ interface LlmReportGenerator {
     fun generate(request: LlmReportRequest): LlmGenerationResult
 }
 
-class DisabledLlmReportGenerator : LlmReportGenerator {
-    override fun generate(request: LlmReportRequest): LlmGenerationResult {
-        return LlmGenerationResult.Failure("LLM integration is disabled")
-    }
-}
-
 class StaticLlmReportGenerator : LlmReportGenerator {
     override fun generate(request: LlmReportRequest): LlmGenerationResult {
         val target = request.target
-        val titles = request.documents.joinToString { it.title }
+        val usageSummary = if (target.usages.isEmpty()) {
+            "No library or plugin usages were resolved for this alias."
+        } else {
+            "Mapped usages: ${target.usages.joinToString { it.identifier }}."
+        }
+        val sourceSummary = if (request.documents.isEmpty()) {
+            "No fetched release-note documents were available."
+        } else {
+            "Fetched ${request.documents.size} release-note document(s)."
+        }
         return LlmGenerationResult.Success(
             GeneratedNarrative(
                 headline = "${target.change.alias}: ${target.change.previousVersion} -> ${target.change.currentVersion}",
-                summary = "Summarized from ${request.documents.size} fetched document(s): $titles.",
-                reviewerChecklist = listOf(
-                    "Review release notes for behavior changes.",
-                    "Validate dependency usages mapped to this alias.",
-                ),
+                summary = "Deterministic summary generated without LLM. $usageSummary $sourceSummary",
+                description = "Deterministic summary generated without LLM. $usageSummary $sourceSummary",
                 riskAssessment = RiskAssessment(
-                    level = RiskLevel.MEDIUM,
-                    summary = "Static adapter marked this upgrade as medium risk pending human review.",
-                    signals = listOf("llm-static-adapter"),
+                    level = when (target.kind) {
+                        UpgradeKind.BOM,
+                        UpgradeKind.MIXED,
+                            -> RiskLevel.HIGH
+
+                        UpgradeKind.GRADLE_PLUGIN,
+                        UpgradeKind.LIBRARY,
+                            -> RiskLevel.MEDIUM
+                    },
+                    summary = "Deterministic risk rating generated without LLM.",
+                    signals = listOf("llm-static-mode", "kind:${target.kind.name.lowercase()}"),
                 ),
             ),
         )

@@ -6,19 +6,41 @@ import hugy.dependencyreport.core.model.UpgradeKind
 import hugy.dependencyreport.core.model.UpgradeTarget
 import hugy.dependencyreport.core.model.UsageType
 import hugy.dependencyreport.core.model.VersionAliasChange
+import hugy.dependencyreport.core.model.VersionChangeClassification
 
-class CatalogDiffService {
-    fun detectVersionAliasChanges(previous: CatalogSnapshot, current: CatalogSnapshot): List<VersionAliasChange> {
+data class ChangeDetectionResult(
+    val changes: List<VersionAliasChange>,
+    val warnings: List<String>,
+)
+
+class CatalogDiffService(
+    private val versionComparator: VersionComparator = VersionComparator(),
+) {
+    fun detectVersionAliasChanges(previous: CatalogSnapshot, current: CatalogSnapshot): ChangeDetectionResult {
         val aliases = (previous.versions.keys + current.versions.keys).sorted()
-        return aliases.mapNotNull { alias ->
+        val changes = mutableListOf<VersionAliasChange>()
+        val warnings = mutableListOf<String>()
+
+        aliases.forEach { alias ->
             val oldVersion = previous.versions[alias]
             val newVersion = current.versions[alias]
             if (oldVersion != null && newVersion != null && oldVersion != newVersion) {
-                VersionAliasChange(alias, oldVersion, newVersion)
-            } else {
-                null
+                val classification = versionComparator.classify(oldVersion, newVersion)
+                when (classification) {
+                    VersionChangeClassification.UPGRADE -> changes += VersionAliasChange(alias, oldVersion, newVersion, classification)
+                    VersionChangeClassification.DOWNGRADE -> warnings +=
+                        "Ignored $alias because the version change was classified as DOWNGRADE: $oldVersion -> $newVersion."
+                    VersionChangeClassification.SAME -> warnings +=
+                        "Ignored $alias because the version change was classified as SAME: $oldVersion -> $newVersion."
+                    VersionChangeClassification.UNKNOWN -> {
+                        changes += VersionAliasChange(alias, oldVersion, newVersion, classification)
+                        warnings += "Included $alias with UNKNOWN version classification: $oldVersion -> $newVersion."
+                    }
+                }
             }
         }
+
+        return ChangeDetectionResult(changes = changes, warnings = warnings)
     }
 
     fun resolveUpgradeTargets(
