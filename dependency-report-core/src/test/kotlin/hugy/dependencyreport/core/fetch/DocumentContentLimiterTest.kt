@@ -20,6 +20,10 @@ class DocumentContentLimiterTest {
         assertEquals("short release notes", document.content)
         assertFalse(document.contentTruncated)
         assertEquals(19, document.originalContentLength)
+        assertFalse(document.contentSelectionApplied)
+        assertEquals(19, document.selectedContentLength)
+        assertTrue(document.selectedHeadings.isEmpty())
+        assertTrue(document.selectionWarnings.isEmpty())
     }
 
     @Test
@@ -39,5 +43,6 @@ class DocumentContentLimiterTest {
             "Document content omitted because it exceeded 10 characters. See release notes: https://example.test/release",
             document.content,
         )
+        assertTrue(document.selectionWarnings.isNotEmpty())
     }
 }

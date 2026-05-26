@@ -100,7 +100,8 @@ The tool stays deterministic because:
 - the baseline comes from an explicit git ref, defaulting to `HEAD`
 - the current catalog comes from an explicit file path, defaulting to `gradle/libs.catalog.toml` and then `gradle/libs.versions.toml`
 - source resolution order is fixed: `sources` -> `inferredMavenPom` -> `unresolved`
-- fetched content is capped before it reaches the LLM
+- explicit changelog documents may be reduced to relevant version sections before the final content cap is applied
+- GitHub release bodies are kept as whole release-note documents and only bounded by the final content cap
 - if fetching or LLM generation fails, the tool emits deterministic fallback text instead of failing the whole workflow
 
 ## CLI usage
@@ -223,6 +224,8 @@ Rules:
 - `github.maxScanReleases` is the hard cap on how many releases may be scanned across all pages
 - `github.includePrereleases` controls whether prereleases may fill gaps when there are not enough stable releases
 - `fetch.maxDocumentContentChars` limits stored document size to keep reports and prompts bounded
+- oversized explicit changelog documents may be reduced to matching version sections before the final size cap is applied
+- oversized GitHub release bodies are not section-selected; they are kept whole and then capped if needed
 - `inference.enabled` toggles Maven POM-based source inference when no explicit source matches
 - if no explicit source matches, Maven POM inference is attempted for mapped libraries and BOMs
 - Gradle plugins without an explicit source mapping are expected to become unresolved unless they also map through a library or BOM usage

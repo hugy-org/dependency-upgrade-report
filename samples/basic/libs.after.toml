@@ -1,12 +1,15 @@
 [versions]
 # Language, Frameworks
-kotlin = "2.2.21"
-commons-io = "2.22.0"
+#kotlin = "2.2.21"
+#commons-io = "2.22.0"
+#azure-identity="1.15.3"
+
 #spring-boot = "4.0.6"
+kotlin = "2.4.0"
 #google-api-services-gmail = "v1-rev20260428-2.0.0"
 ## =================================================================================================================== #
 ## Plugins
-detekt = "2.0.0-alpha.3"
+#detekt = "2.0.0-alpha.3"
 
 
 

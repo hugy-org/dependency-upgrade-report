@@ -352,6 +352,195 @@ class DependencyReportGeneratorTest {
         assertTrue(report.outputs.commitBody.contains("Release notes: https://developers.google.com/workspace/gmail/release-notes"))
         assertTrue(report.outputs.unifiedDescription.contains("Summary: Configured as link-only source. Automatic enrichment was skipped."))
     }
+
+    @Test
+    fun `skips llm when all fetched documents were omitted due to size limits`() {
+        var llmCalls = 0
+        val report = DependencyReportGenerator(
+            documentFetcher = FakeFetcher(
+                mapOf(
+                    "https://github.com/JetBrains/kotlin/releases" to listOf(
+                        FetchedDocument(
+                            title = "Kotlin 2.4.0",
+                            sourceUrl = "https://github.com/JetBrains/kotlin/releases/tag/v2.4.0",
+                            content = "Document content omitted because it exceeded 12000 characters. See release notes: https://github.com/JetBrains/kotlin/releases/tag/v2.4.0",
+                            version = "2.4.0",
+                            contentTruncated = true,
+                            originalContentLength = 50_000,
+                        ),
+                    ),
+                ),
+            ),
+            llmReportGenerator = object : LlmReportGenerator {
+                override fun generate(request: LlmReportRequest): LlmGenerationResult {
+                    llmCalls += 1
+                    return LlmGenerationResult.Failure("should not be called")
+                }
+            },
+        ).generate(
+            previousCatalog = tempCatalog(
+                """
+                [versions]
+                kotlin = "2.3.21"
+
+                [plugins]
+                kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+                """.trimIndent(),
+            ),
+            currentCatalog = tempCatalog(
+                """
+                [versions]
+                kotlin = "2.4.0"
+
+                [plugins]
+                kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+                """.trimIndent(),
+            ),
+            config = DependencyReportConfig(
+                sources = listOf(SourceDefinition(match = SourceMatch(alias = "kotlin"), githubRepo = "JetBrains/kotlin")),
+            ),
+        )
+
+        assertEquals(0, llmCalls)
+        val entry = report.entries.single()
+        assertTrue(entry.fallbackUsed)
+        assertTrue(entry.errors.any { it.contains("Target version release-note document was omitted due to size limits") })
+    }
+
+    @Test
+    fun `uses meaningful documents plus omission note and raises low risk to medium for partial context`() {
+        lateinit var llmRequest: LlmReportRequest
+        val report = DependencyReportGenerator(
+            documentFetcher = FakeFetcher(
+                mapOf(
+                    "https://github.com/JetBrains/kotlin/releases" to listOf(
+                        FetchedDocument(
+                            title = "Kotlin 2.4.0",
+                            sourceUrl = "https://github.com/JetBrains/kotlin/releases/tag/v2.4.0",
+                            content = "Useful release content.",
+                            version = "2.4.0",
+                        ),
+                        FetchedDocument(
+                            title = "Kotlin 2.3.30",
+                            sourceUrl = "https://github.com/JetBrains/kotlin/releases/tag/v2.3.30",
+                            content = "Document content omitted because it exceeded 12000 characters. See release notes: https://github.com/JetBrains/kotlin/releases/tag/v2.3.30",
+                            version = "2.3.30",
+                            contentTruncated = true,
+                            originalContentLength = 40_000,
+                        ),
+                    ),
+                ),
+            ),
+            llmReportGenerator = object : LlmReportGenerator {
+                override fun generate(request: LlmReportRequest): LlmGenerationResult {
+                    llmRequest = request
+                    return LlmGenerationResult.Success(
+                        GeneratedNarrative(
+                            headline = "kotlin 2.3.21 -> 2.4.0",
+                            summary = "Upgrade Kotlin Gradle plugins to 2.4.0.",
+                            description = "Upgrade Kotlin Gradle plugins to 2.4.0.",
+                            riskAssessment = RiskAssessment(
+                                level = RiskLevel.LOW,
+                                summary = "Low risk from the available notes.",
+                                signals = listOf("llm-low"),
+                            ),
+                        ),
+                    )
+                }
+            },
+        ).generate(
+            previousCatalog = tempCatalog(
+                """
+                [versions]
+                kotlin = "2.3.21"
+
+                [plugins]
+                kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+                """.trimIndent(),
+            ),
+            currentCatalog = tempCatalog(
+                """
+                [versions]
+                kotlin = "2.4.0"
+
+                [plugins]
+                kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+                """.trimIndent(),
+            ),
+            config = DependencyReportConfig(
+                sources = listOf(SourceDefinition(match = SourceMatch(alias = "kotlin"), githubRepo = "JetBrains/kotlin")),
+            ),
+        )
+
+        assertEquals(2, llmRequest.documents.size)
+        assertTrue(llmRequest.documents.any { it.content == "Useful release content." })
+        assertTrue(llmRequest.documents.any { it.title == "Omitted release-note documents" && it.content.contains("2.3.30") })
+
+        val entry = report.entries.single()
+        assertFalse(entry.fallbackUsed)
+        assertEquals(RiskLevel.MEDIUM, entry.narrative.riskAssessment.level)
+        assertTrue(entry.narrative.riskAssessment.signals.contains("partial-release-notes-context"))
+    }
+
+    @Test
+    fun `skips llm when target version document is omitted even if older version content is available`() {
+        var llmCalls = 0
+        val report = DependencyReportGenerator(
+            documentFetcher = FakeFetcher(
+                mapOf(
+                    "https://github.com/JetBrains/kotlin/releases" to listOf(
+                        FetchedDocument(
+                            title = "Kotlin 2.3.21",
+                            sourceUrl = "https://github.com/JetBrains/kotlin/releases/tag/v2.3.21",
+                            content = "Useful 2.3.21 release content.",
+                            version = "2.3.21",
+                        ),
+                        FetchedDocument(
+                            title = "Kotlin 2.4.0",
+                            sourceUrl = "https://github.com/JetBrains/kotlin/releases/tag/v2.4.0",
+                            content = "Document content omitted because it exceeded 12000 characters. See release notes: https://github.com/JetBrains/kotlin/releases/tag/v2.4.0",
+                            version = "2.4.0",
+                            contentTruncated = true,
+                            originalContentLength = 60_000,
+                        ),
+                    ),
+                ),
+            ),
+            llmReportGenerator = object : LlmReportGenerator {
+                override fun generate(request: LlmReportRequest): LlmGenerationResult {
+                    llmCalls += 1
+                    return LlmGenerationResult.Failure("should not be called")
+                }
+            },
+        ).generate(
+            previousCatalog = tempCatalog(
+                """
+                [versions]
+                kotlin = "2.3.20"
+
+                [plugins]
+                kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+                """.trimIndent(),
+            ),
+            currentCatalog = tempCatalog(
+                """
+                [versions]
+                kotlin = "2.4.0"
+
+                [plugins]
+                kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+                """.trimIndent(),
+            ),
+            config = DependencyReportConfig(
+                sources = listOf(SourceDefinition(match = SourceMatch(alias = "kotlin"), githubRepo = "JetBrains/kotlin")),
+            ),
+        )
+
+        assertEquals(0, llmCalls)
+        val entry = report.entries.single()
+        assertTrue(entry.fallbackUsed)
+        assertTrue(entry.errors.any { it.contains("Target version release-note document was omitted due to size limits") })
+    }
 }
 
 private fun tempCatalog(content: String): Path {

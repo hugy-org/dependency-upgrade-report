@@ -6,10 +6,13 @@ import hugy.dependencyreport.core.config.DependencyReportConfig
 import hugy.dependencyreport.core.fetch.FetchResult
 import hugy.dependencyreport.core.fetch.ReleaseFetchRequest
 import hugy.dependencyreport.core.fetch.ReleaseDocumentFetcher
+import hugy.dependencyreport.core.fetch.VersionSelection
 import hugy.dependencyreport.core.llm.LlmGenerationResult
 import hugy.dependencyreport.core.llm.LlmReportGenerator
 import hugy.dependencyreport.core.llm.LlmReportRequest
 import hugy.dependencyreport.core.model.GeneratedReport
+import hugy.dependencyreport.core.model.FetchedDocument
+import hugy.dependencyreport.core.model.UpgradeKind
 import hugy.dependencyreport.core.model.UpgradeReportEntry
 import hugy.dependencyreport.core.source.ReleaseSourceResolver
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -104,12 +107,33 @@ class DependencyReportGenerator(
                 }
             }
 
-            val llmResult = if (documents.isNotEmpty()) {
+            val meaningfulDocuments = documents.filterNot { it.contentTruncated }
+            val omittedDocuments = documents.filter { it.contentTruncated }
+            val hasPartialContext = meaningfulDocuments.isNotEmpty() && omittedDocuments.isNotEmpty()
+            val targetVersionDocumentOmitted = omittedDocuments.any {
+                isSameVersion(it.version, target.change.currentVersion)
+            }
+            val llmDocuments = when {
+                targetVersionDocumentOmitted -> emptyList()
+                meaningfulDocuments.isEmpty() -> emptyList()
+                omittedDocuments.isEmpty() -> meaningfulDocuments
+                else -> meaningfulDocuments + buildOmittedDocumentsNote(target, omittedDocuments)
+            }
+
+            val llmResult = if (llmDocuments.isNotEmpty()) {
                 llmAttempted = true
-                logger.info { "Attempting LLM enrichment for alias=${target.change.alias} with ${documents.size} document(s)" }
-                llmReportGenerator.generate(LlmReportRequest(target, documents))
+                logger.info {
+                    "Attempting LLM enrichment for alias=${target.change.alias} with ${llmDocuments.size} prompt document(s) " +
+                        "(meaningful=${meaningfulDocuments.size}, omitted=${omittedDocuments.size})"
+                }
+                llmReportGenerator.generate(LlmReportRequest(target, llmDocuments))
             } else {
-                LlmGenerationResult.Failure("No fetched documents available for LLM enrichment")
+                val reason = when {
+                    documents.isEmpty() -> "No fetched documents available for LLM enrichment"
+                    targetVersionDocumentOmitted -> "Target version release-note document was omitted due to size limits; skipping LLM enrichment"
+                    else -> "All fetched documents were omitted due to size limits; skipping LLM enrichment"
+                }
+                LlmGenerationResult.Failure(reason)
             }
 
             val fallbackUsed: Boolean
@@ -129,7 +153,11 @@ class DependencyReportGenerator(
                 }
             }
 
-            val processedNarrative = narrativeRiskPostProcessor.apply(target, narrative)
+            val processedNarrative = narrativeRiskPostProcessor.apply(
+                target = target,
+                narrative = narrative,
+                hasPartiallyOmittedDocuments = hasPartialContext,
+            )
 
             UpgradeReportEntry(
                 target = target,
@@ -145,5 +173,38 @@ class DependencyReportGenerator(
             "Rendering report with ${entries.size} entries (fallbacks=${entries.count { it.fallbackUsed }}, unresolved=${entries.count { it.sourceResolution.source.type.name == "UNRESOLVED" }})"
         }
         return reportRenderer.render(entries, llmAttempted, llmSucceeded, changeDetection.warnings)
+    }
+
+    private fun buildOmittedDocumentsNote(
+        target: hugy.dependencyreport.core.model.UpgradeTarget,
+        omittedDocuments: List<FetchedDocument>,
+    ): FetchedDocument {
+        val omittedVersions = omittedDocuments.mapNotNull { it.version }.distinct()
+        val omittedVersionSummary = if (omittedVersions.isEmpty()) {
+            "Some selected release-note documents"
+        } else {
+            "Release-note documents for versions ${omittedVersions.joinToString(", ")}"
+        }
+        return FetchedDocument(
+            title = "Omitted release-note documents",
+            sourceUrl = omittedDocuments.first().sourceUrl,
+            version = target.change.currentVersion,
+            content = "$omittedVersionSummary were omitted because they exceeded the configured character limit. " +
+                "Base summary and risk must account for partial context.",
+            contentTruncated = false,
+        )
+    }
+
+    private fun isSameVersion(left: String?, right: String): Boolean {
+        if (left.isNullOrBlank()) {
+            return false
+        }
+        val leftParsed = VersionSelection.parse(left)
+        val rightParsed = VersionSelection.parse(right)
+        return if (leftParsed != null && rightParsed != null) {
+            leftParsed.normalized == rightParsed.normalized
+        } else {
+            left == right
+        }
     }
 }

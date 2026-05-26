@@ -10,6 +10,12 @@ class DocumentContentLimiter(
         sourceUrl: String,
         content: String,
         version: String? = null,
+        originalContentLength: Int = content.trim().length,
+        contentSelectionApplied: Boolean = false,
+        contentSelectionStrategy: String? = null,
+        selectedContentLength: Int = content.trim().length,
+        selectedHeadings: List<String> = emptyList(),
+        selectionWarnings: List<String> = emptyList(),
     ): FetchedDocument {
         val normalizedLimit = maxDocumentContentChars.coerceAtLeast(1)
         val normalizedContent = content.trim()
@@ -20,7 +26,12 @@ class DocumentContentLimiter(
                 content = normalizedContent,
                 version = version,
                 contentTruncated = false,
-                originalContentLength = normalizedContent.length,
+                originalContentLength = originalContentLength,
+                contentSelectionApplied = contentSelectionApplied,
+                contentSelectionStrategy = contentSelectionStrategy,
+                selectedContentLength = selectedContentLength,
+                selectedHeadings = selectedHeadings,
+                selectionWarnings = selectionWarnings,
             )
         }
 
@@ -30,7 +41,12 @@ class DocumentContentLimiter(
             content = "Document content omitted because it exceeded $normalizedLimit characters. See release notes: $sourceUrl",
             version = version,
             contentTruncated = true,
-            originalContentLength = normalizedContent.length,
+            originalContentLength = originalContentLength,
+            contentSelectionApplied = contentSelectionApplied,
+            contentSelectionStrategy = contentSelectionStrategy,
+            selectedContentLength = selectedContentLength,
+            selectedHeadings = selectedHeadings,
+            selectionWarnings = selectionWarnings + "Selected content still exceeded $normalizedLimit characters and was omitted.",
         )
     }
 }

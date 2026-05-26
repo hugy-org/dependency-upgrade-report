@@ -36,6 +36,9 @@ class HttpReleaseDocumentFetcher(
 ) : ReleaseDocumentFetcher {
     private val objectMapper = jacksonObjectMapper()
     private val contentLimiter = DocumentContentLimiter(fetchConfig.maxDocumentContentChars)
+    private val contextSelector = DocumentContextSelector(fetchConfig.maxDocumentContentChars)
+    private val maxRedirects = 5
+    private val githubApiBasePrefix = githubConfig.apiBaseUrl.trimEnd('/')
 
     override fun fetch(request: ReleaseFetchRequest): FetchResult {
         logger.info {
@@ -44,30 +47,33 @@ class HttpReleaseDocumentFetcher(
         return when (request.source.type) {
             ReleaseSourceType.REGISTRY,
             ReleaseSourceType.EXPLICIT_CHANGELOG_URL,
-                -> fetchUrlDocument(request.source)
+                -> fetchUrlDocument(request)
 
             ReleaseSourceType.GITHUB_RELEASES -> fetchGitHubReleaseNotes(request)
             ReleaseSourceType.UNRESOLVED -> FetchResult.Failure("No release source was resolved")
         }
     }
 
-    private fun fetchUrlDocument(source: ReleaseSource): FetchResult {
+    private fun fetchUrlDocument(request: ReleaseFetchRequest): FetchResult {
+        val source = request.source
         val url = source.sourceUrl ?: return FetchResult.Failure("Missing source URL")
-        logger.info { "Fetching URL-based changelog from $url" }
+        val fetchUrl = normalizeExplicitFetchUrl(url)
+        logger.info { "Fetching URL-based changelog from $fetchUrl" }
         return try {
-            val request = baseRequest(url)
-            val response = httpClient.send(request, HttpResponse.BodyHandlers.ofString())
+            val response = sendTextRequest(fetchUrl)
             if (response.statusCode() !in 200..299) {
-                logger.warn { "URL fetch failed with HTTP ${response.statusCode()} for $url" }
-                FetchResult.Failure("HTTP ${response.statusCode()} from $url")
+                logger.warn { "URL fetch failed with HTTP ${response.statusCode()} for $fetchUrl" }
+                FetchResult.Failure("HTTP ${response.statusCode()} from $fetchUrl")
             } else {
-                logger.info { "Fetched URL-based changelog successfully from $url" }
+                logger.info { "Fetched URL-based changelog successfully from $fetchUrl" }
                 FetchResult.Success(
                     listOf(
-                        contentLimiter.limit(
+                        buildFetchedDocument(
+                            request = request,
                             title = source.displayName,
                             sourceUrl = url,
                             content = response.body(),
+                            applyContextSelection = true,
                         ),
                     ),
                 )
@@ -88,7 +94,7 @@ class HttpReleaseDocumentFetcher(
             return FetchResult.Failure("Current version must be greater than previous version for GitHub release selection")
         }
         logger.info {
-            "Fetching GitHub releases for ${repository} in window ${request.target.change.previousVersion} -> ${request.target.change.currentVersion}"
+            "Fetching GitHub releases for $repository in window ${request.target.change.previousVersion} -> ${request.target.change.currentVersion}"
         }
 
         return try {
@@ -99,8 +105,7 @@ class HttpReleaseDocumentFetcher(
 
             while (scanned < githubConfig.maxScanReleases) {
                 val apiUrl = "${githubConfig.apiBaseUrl}/repos/$repository/releases?per_page=$perPage&page=$page"
-                val httpRequest = baseRequest(apiUrl)
-                val response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
+                val response = sendTextRequest(apiUrl)
                 if (response.statusCode() !in 200..299) {
                     logger.warn { "GitHub releases request failed with HTTP ${response.statusCode()} for $apiUrl" }
                     return FetchResult.Failure("GitHub API returned HTTP ${response.statusCode()} for $apiUrl")
@@ -116,10 +121,10 @@ class HttpReleaseDocumentFetcher(
                     }
                     scanned += 1
 
-                    val body = node.path("body").asText("").trim()
-                    val htmlUrl = node.path("html_url").asText("").trim()
-                    val title = node.path("name").asText(node.path("tag_name").asText("release"))
-                    val tagName = node.path("tag_name").asText("")
+                    val body = node.path("body").asString("").trim()
+                    val htmlUrl = node.path("html_url").asString("").trim()
+                    val title = node.path("name").asString(node.path("tag_name").asString("release"))
+                    val tagName = node.path("tag_name").asString("")
                     val candidateVersions = VersionSelection.extractCandidates(tagName, title, htmlUrl)
                     val matchedVersion = candidateVersions.firstOrNull {
                         VersionSelection.isWithinUpgradeWindow(it, previousVersion, currentVersion)
@@ -160,13 +165,12 @@ class HttpReleaseDocumentFetcher(
             if (rawDocuments.none { it.version.normalized == currentVersion.normalized }) {
                 val encodedVersion = URLEncoder.encode(request.target.change.currentVersion, Charsets.UTF_8)
                 val tagApiUrl = "${githubConfig.apiBaseUrl}/repos/$repository/releases/tags/$encodedVersion"
-                val httpRequest = baseRequest(tagApiUrl)
-                val response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
+                val response = sendTextRequest(tagApiUrl)
                 if (response.statusCode() in 200..299) {
                     val node = objectMapper.readTree(response.body())
-                    val body = node.path("body").asText("").trim()
-                    val htmlUrl = node.path("html_url").asText("").trim()
-                    val title = node.path("name").asText(node.path("tag_name").asText("release"))
+                    val body = node.path("body").asString("").trim()
+                    val htmlUrl = node.path("html_url").asString("").trim()
+                    val title = node.path("name").asString(node.path("tag_name").asString("release"))
                     if (body.isNotBlank() && htmlUrl.isNotBlank()) {
                         rawDocuments += VersionedValue(
                             version = currentVersion,
@@ -193,11 +197,13 @@ class HttpReleaseDocumentFetcher(
                 maxReleases = githubConfig.maxReleases,
                 includePrereleases = githubConfig.includePrereleases,
             ).map {
-                contentLimiter.limit(
+                buildFetchedDocument(
+                    request = request,
                     title = it.value.title,
                     sourceUrl = it.value.sourceUrl,
                     content = it.value.content,
                     version = it.version.normalized,
+                    applyContextSelection = false,
                 )
             }
             logger.info {
@@ -228,14 +234,100 @@ class HttpReleaseDocumentFetcher(
         val content: String,
     )
 
+    private fun buildFetchedDocument(
+        request: ReleaseFetchRequest,
+        title: String,
+        sourceUrl: String,
+        content: String,
+        version: String? = null,
+        applyContextSelection: Boolean,
+    ): FetchedDocument {
+        val normalizedContent = content.trim()
+        val selection = if (applyContextSelection) {
+            contextSelector.select(
+                content = normalizedContent,
+                previousVersion = request.target.change.previousVersion,
+                currentVersion = request.target.change.currentVersion,
+            )
+        } else {
+            SelectedDocumentContext(
+                content = normalizedContent,
+                applied = false,
+                strategy = "whole-document",
+                originalContentLength = normalizedContent.length,
+                selectedContentLength = normalizedContent.length,
+                selectedHeadings = emptyList(),
+                warnings = emptyList(),
+            )
+        }
+        return contentLimiter.limit(
+            title = title,
+            sourceUrl = sourceUrl,
+            content = selection.content,
+            version = version,
+            originalContentLength = selection.originalContentLength,
+            contentSelectionApplied = selection.applied,
+            contentSelectionStrategy = selection.strategy,
+            selectedContentLength = selection.selectedContentLength,
+            selectedHeadings = selection.selectedHeadings,
+            selectionWarnings = selection.warnings,
+        )
+    }
+
     private fun baseRequest(url: String): HttpRequest {
+        val targetUri = URI.create(url)
         val builder = HttpRequest.newBuilder(URI.create(url))
             .GET()
             .header("Accept", "application/vnd.github+json, text/plain, text/html")
             .header("User-Agent", "dependency-upgrade-report")
-        githubConfig.token?.takeIf { it.isNotBlank() }?.let {
+        githubConfig.token?.takeIf { it.isNotBlank() && shouldAttachGitHubToken(targetUri) }?.let {
             builder.header("Authorization", "Bearer $it")
         }
         return builder.build()
+    }
+
+    private fun normalizeExplicitFetchUrl(url: String): String {
+        val uri = URI.create(url)
+        if (!uri.host.equals("github.com", ignoreCase = true)) {
+            return url
+        }
+        if (!uri.path.contains("/blob/")) {
+            return url
+        }
+
+        val rawQuery = buildList {
+            uri.rawQuery
+                ?.split('&')
+                ?.filter { it.isNotBlank() && !it.startsWith("raw=") }
+                ?.let(::addAll)
+            add("raw=1")
+        }.joinToString("&")
+
+        return URI(
+            uri.scheme,
+            uri.authority,
+            uri.path,
+            rawQuery,
+            uri.fragment,
+        ).toString()
+    }
+
+    private fun sendTextRequest(url: String, redirectCount: Int = 0): HttpResponse<String> {
+        val response = httpClient.send(baseRequest(url), HttpResponse.BodyHandlers.ofString())
+        if (response.statusCode() !in 300..399) {
+            return response
+        }
+        if (redirectCount >= maxRedirects) {
+            return response
+        }
+
+        val location = response.headers().firstValue("Location").orElse(null) ?: return response
+        val redirectedUrl = URI.create(url).resolve(location).toString()
+        logger.debug { "Following HTTP ${response.statusCode()} redirect from $url to $redirectedUrl" }
+        return sendTextRequest(redirectedUrl, redirectCount + 1)
+    }
+
+    private fun shouldAttachGitHubToken(targetUri: URI): Boolean {
+        return targetUri.toString().startsWith(githubApiBasePrefix)
     }
 }

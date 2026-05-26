@@ -26,7 +26,7 @@ inference:
   mavenRepositoryBaseUrl: https://repo1.maven.org/maven2 # Maven repository used for POM lookup.
 
 llm:
-  mode: static # Use 'static' for deterministic summaries or 'openrouter' for LLM enrichment.
+  mode: openrouter # Use 'static' for deterministic summaries or 'openrouter' for LLM enrichment.
   model: openai/gpt-4.1-mini # Model name for OpenRouter mode.
   # Optional local override. Prefer apiKeyEnv in CI.
   # apiKey: your-openrouter-api-key

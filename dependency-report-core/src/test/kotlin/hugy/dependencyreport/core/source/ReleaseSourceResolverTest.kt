@@ -115,6 +115,36 @@ class ReleaseSourceResolverTest {
         assertTrue(resolution.provenance.none { it.contains("Gradle Plugin Portal") })
     }
 
+    @Test
+    fun `maven pom parsing ignores external entities`() {
+        val resolver = ReleaseSourceResolver(
+            config = DependencyReportConfig(),
+            metadataLookup = FakeSourceMetadataLookup(
+                pomResults = mapOf(
+                    "org.jetbrains.kotlin:kotlin-bom:2.0.0" to MetadataLookupResult.Success(
+                        url = "https://repo1.maven.org/kotlin-bom.pom",
+                        content = """
+                            <!DOCTYPE project [
+                              <!ENTITY xxe SYSTEM "file:///etc/passwd">
+                            ]>
+                            <project>
+                              <url>&xxe;</url>
+                              <scm>
+                                <url>https://github.com/JetBrains/kotlin</url>
+                              </scm>
+                            </project>
+                        """.trimIndent(),
+                    ),
+                ),
+            ),
+        )
+
+        val resolution = resolver.resolve(kotlinBomTarget())
+
+        assertEquals("unresolved", resolution.matchedBy)
+        assertEquals(ReleaseSourceType.UNRESOLVED, resolution.source.type)
+    }
+
     private fun kotlinBomTarget() = UpgradeTarget(
         change = VersionAliasChange("kotlin", "1.9.24", "2.0.0"),
         usages = listOf(

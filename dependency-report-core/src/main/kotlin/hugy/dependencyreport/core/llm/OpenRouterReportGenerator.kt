@@ -241,14 +241,14 @@ class OpenRouterReportGenerator(
         val contentNode = message.content
         if (contentNode != null && !contentNode.isNull) {
             if (contentNode.isTextual) {
-                return contentNode.asText().takeIf { it.isNotBlank() }
+                return contentNode.asString().takeIf { it.isNotBlank() }
             }
             if (contentNode.isArray) {
                 val text = contentNode.mapNotNull { node ->
                     when {
-                        node.isTextual -> node.asText()
-                        node.isObject && node.path("text").isTextual -> node.path("text").asText()
-                        node.isObject && node.path("content").isTextual -> node.path("content").asText()
+                        node.isTextual -> node.asString()
+                        node.isObject && node.path("text").isTextual -> node.path("text").asString()
+                        node.isObject && node.path("content").isTextual -> node.path("content").asString()
                         else -> null
                     }
                 }.joinToString("\n").trim()
@@ -437,7 +437,7 @@ class OpenRouterReportGenerator(
 
 private fun JsonNode.requiredText(fieldName: String): String? {
     val value = path(fieldName)
-    return value.asText().trim().takeIf { value.isValueNode && it.isNotBlank() }
+    return value.asString().trim().takeIf { value.isValueNode && it.isNotBlank() }
 }
 
 private fun JsonNode.textArray(fieldName: String): List<String> {
@@ -446,7 +446,7 @@ private fun JsonNode.textArray(fieldName: String): List<String> {
         return emptyList()
     }
     return value.mapNotNull { node ->
-        node.asText().trim().takeIf { node.isValueNode && it.isNotBlank() }
+        node.asString().trim().takeIf { node.isValueNode && it.isNotBlank() }
     }
 }
 

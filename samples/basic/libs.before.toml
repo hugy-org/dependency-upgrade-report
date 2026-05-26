@@ -1,9 +1,10 @@
 [versions]
 # Language, Frameworks
-kotlin = "2.2.0"
 commons-io = "2.20.0"
+azure-identity="1.16.3"
 
-#spring-boot = "4.0.0"
+spring-boot = "4.0.3"
+kotlin = "2.3.21"
 #spring-cloud = "2025.1.1"
 #google-api-services-gmail = "v1-rev20260427-2.0.0"
 #r2dbc-migrate-spring-boot-starter = "4.0.1"

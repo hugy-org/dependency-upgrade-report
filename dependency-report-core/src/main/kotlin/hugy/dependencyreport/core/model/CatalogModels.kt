@@ -93,6 +93,11 @@ data class FetchedDocument(
     val version: String? = null,
     val contentTruncated: Boolean = false,
     val originalContentLength: Int = content.length,
+    val contentSelectionApplied: Boolean = false,
+    val contentSelectionStrategy: String? = null,
+    val selectedContentLength: Int = content.length,
+    val selectedHeadings: List<String> = emptyList(),
+    val selectionWarnings: List<String> = emptyList(),
 )
 
 enum class RiskLevel {

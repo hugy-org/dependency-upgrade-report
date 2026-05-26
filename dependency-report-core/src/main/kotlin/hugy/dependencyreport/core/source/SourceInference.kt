@@ -8,6 +8,7 @@ import hugy.dependencyreport.core.model.UsageType
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.w3c.dom.Document
 import java.io.StringReader
+import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 import org.xml.sax.InputSource
 
@@ -78,6 +79,15 @@ internal object SourceInference {
         return try {
             val builderFactory = DocumentBuilderFactory.newInstance()
             builderFactory.isNamespaceAware = false
+            builderFactory.isXIncludeAware = false
+            builderFactory.isExpandEntityReferences = false
+            builderFactory.setFeature(XMLConstants.FEATURE_SECURE_PROCESSING, true)
+            builderFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true)
+            builderFactory.setFeature("http://xml.org/sax/features/external-general-entities", false)
+            builderFactory.setFeature("http://xml.org/sax/features/external-parameter-entities", false)
+            builderFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
+            builderFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
+            builderFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
             val builder = builderFactory.newDocumentBuilder()
             val document = builder.parse(InputSource(StringReader(xml)))
             document.documentElement.normalize()
