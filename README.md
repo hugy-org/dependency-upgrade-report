@@ -27,6 +27,7 @@ In practice:
 
 - `commit-body.txt` is a good fit for the git commit body
 - `jira-description.txt` is a good fit for the primary human-readable upgrade report
+- `jira-description.json` is a good fit for Jira Cloud `description.content`
 - `mr-description.txt` can be used directly, or replaced by a short Jira link if your Git provider has trouble with multiline descriptions
 - `report.json` is mainly a debugging and provenance artifact
 
@@ -91,6 +92,7 @@ flowchart TD
     N --> P["commit-body.txt"]
     N --> Q["mr-description.txt"]
     N --> R["jira-description.txt"]
+    N --> S["jira-description.json"]
 ```
 
 ## Deterministic boundaries
@@ -147,6 +149,11 @@ dependency-report generate \
   --catalog-path gradle/libs.versions.toml
 ```
 
+For Jira Cloud, the intended integration is:
+
+- use `jira-description.json` directly as the `description.content` array
+- keep `jira-description.txt` for human inspection and debugging
+
 Recommended first rollout:
 
 - start with `llm.mode: static`
@@ -162,8 +169,20 @@ The simplified MVP writes only:
 - `commit-body.txt`
 - `mr-description.txt`
 - `jira-description.txt`
+- `jira-description.json`
 
 `mr-description.txt` and `jira-description.txt` intentionally use the same rendered text.
+
+`jira-description.json` contains Jira Cloud ADF content nodes derived from `jira-description.txt`:
+
+- first non-empty line becomes a level-3 heading
+- dependency blocks are separated by blank lines
+- each block renders dependency name, summary, risk, and optional release notes
+- release-note URLs are emitted as `inlineCard` nodes
+- risk colors are restricted to Jira-safe values:
+  - `LOW` -> `#36b37e`
+  - `MEDIUM` -> `#ff991f`
+  - `HIGH` -> `#ff5630`
 
 ## Config
 

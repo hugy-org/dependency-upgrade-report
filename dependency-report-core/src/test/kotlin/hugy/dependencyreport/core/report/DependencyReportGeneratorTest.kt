@@ -53,7 +53,7 @@ class DependencyReportGeneratorTest {
 
         assertTrue(report.outputs.commitBody.contains("- kotlin 1.9.24 -> 2.0.0"))
         assertTrue(report.outputs.commitBody.contains("Release notes: https://github.com/JetBrains/kotlin/releases/tag/v2.0.0"))
-        assertTrue(report.outputs.unifiedDescription.contains("Dependency upgrade review"))
+        assertTrue(report.outputs.unifiedDescription.contains("Dependency update review"))
         assertTrue(report.outputs.unifiedDescription.contains("kotlin 1.9.24 -> 2.0.0"))
         assertTrue(report.outputs.unifiedDescription.contains("Summary: Deterministic summary generated without LLM."))
         assertTrue(report.outputs.unifiedDescription.contains("Release notes: https://github.com/JetBrains/kotlin/releases/tag/v2.0.0"))

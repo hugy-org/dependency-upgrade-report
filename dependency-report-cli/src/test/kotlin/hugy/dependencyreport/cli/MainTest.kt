@@ -63,10 +63,14 @@ class MainTest {
 
         assertEquals(0, exitCode)
         assertTrue(outputDir.resolve("report.json").toFile().isFile)
+        assertTrue(outputDir.resolve("jira-description.json").toFile().isFile)
         val reportJson = outputDir.resolve("report.json").readText()
+        val jiraDescriptionJson = outputDir.resolve("jira-description.json").readText()
         assertTrue(reportJson.contains("\"alias\" : \"kotlin\""))
         assertTrue(reportJson.contains("\"previousVersion\" : \"1.9.24\""))
         assertTrue(reportJson.contains("\"currentVersion\" : \"2.0.0\""))
+        assertTrue(jiraDescriptionJson.contains(""""type" : "heading""""))
+        assertTrue(jiraDescriptionJson.contains(""""type" : "paragraph""""))
     }
 
     @Test

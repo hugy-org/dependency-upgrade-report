@@ -34,7 +34,7 @@ class ReportRenderer {
 
     private fun renderCommitBody(entries: List<UpgradeReportEntry>): String {
         return buildString {
-            appendLine("Dependency upgrade report")
+            appendLine("Dependency update report")
             appendLine()
             entries.forEach { entry ->
                 appendLine("- ${deterministicTitle(entry)}")
@@ -45,7 +45,7 @@ class ReportRenderer {
 
     private fun renderUnifiedDescription(entries: List<UpgradeReportEntry>): String {
         return buildString {
-            appendLine("Dependency upgrade review")
+            appendLine("Dependency update review")
             appendLine()
             entries.forEach { entry ->
                 val title = deterministicTitle(entry)

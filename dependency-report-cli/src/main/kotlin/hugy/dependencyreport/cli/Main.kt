@@ -12,6 +12,7 @@ import hugy.dependencyreport.core.llm.LlmReportGenerator
 import hugy.dependencyreport.core.llm.OpenRouterReportGenerator
 import hugy.dependencyreport.core.llm.StaticLlmReportGenerator
 import hugy.dependencyreport.core.report.DependencyReportGenerator
+import hugy.dependencyreport.core.report.JiraDescriptionFormatter
 import io.github.oshai.kotlinlogging.KotlinLogging
 import java.nio.file.Files
 import java.nio.file.Path
@@ -27,6 +28,7 @@ private enum class OutputFile(val fileName: String) {
     COMMIT_BODY("commit-body.txt"),
     MR_DESCRIPTION("mr-description.txt"),
     JIRA_DESCRIPTION("jira-description.txt"),
+    JIRA_DESCRIPTION_JSON("jira-description.json"),
 }
 
 fun main(args: Array<String>) {
@@ -83,6 +85,7 @@ internal fun runCli(
         .build()
     val config = yamlMapper.readValue<DependencyReportConfig>(Files.readString(configPath))
     val llmGenerator = createLlmGenerator(config)
+    val jiraDescriptionFormatter = JiraDescriptionFormatter()
     logger.info { "Configured LLM mode: ${config.llm.mode}" }
 
     logger.info {
@@ -106,6 +109,11 @@ internal fun runCli(
     writeOutput(outputDir, OutputFile.COMMIT_BODY, report.outputs.commitBody)
     writeOutput(outputDir, OutputFile.MR_DESCRIPTION, report.outputs.unifiedDescription)
     writeOutput(outputDir, OutputFile.JIRA_DESCRIPTION, report.outputs.unifiedDescription)
+    writeOutput(
+        outputDir,
+        OutputFile.JIRA_DESCRIPTION_JSON,
+        ObjectMappers.json.writeValueAsString(jiraDescriptionFormatter.format(report.outputs.unifiedDescription)),
+    )
 
     logger.info {
         "Report generation completed (entries=${report.entries.size}, fallbacks=${report.manifest.fallbackCount}, unresolved=${report.manifest.unresolvedCount})"

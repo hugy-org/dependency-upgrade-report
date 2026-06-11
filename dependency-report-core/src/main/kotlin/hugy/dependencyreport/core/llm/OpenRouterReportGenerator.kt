@@ -8,6 +8,7 @@ import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.jacksonObjectMapper
 import tools.jackson.module.kotlin.kotlinModule
 import hugy.dependencyreport.core.config.LlmConfig
+import hugy.dependencyreport.core.fetch.VersionSelection
 import hugy.dependencyreport.core.model.GeneratedNarrative
 import hugy.dependencyreport.core.model.RiskAssessment
 import hugy.dependencyreport.core.model.RiskLevel
@@ -152,6 +153,10 @@ class OpenRouterReportGenerator(
         } else {
             target.usages.joinToString(", ") { "${it.usageType}:${it.identifier}" }
         }
+        val versionChangeScope = describeVersionChangeScope(
+            previousVersion = target.change.previousVersion,
+            currentVersion = target.change.currentVersion,
+        )
         val systemPrompt = """
             You generate deterministic dependency-upgrade report content.
             Use only the provided release-note documents and upgrade metadata.
@@ -161,11 +166,17 @@ class OpenRouterReportGenerator(
             The headline must be short.
             The summary must add detail and must not repeat the headline verbatim.
             The description must be suitable for MR and Jira text and must not repeat the headline verbatim.
+            Risk must be evidence-based from the provided release-note documents.
+            Do not claim breaking changes, incompatibilities, regressions, removals, or required migrations unless they are explicitly supported by the provided release-note documents.
+            Do not invent risk signals.
+            Patch-only upgrades should rarely be HIGH risk. Use HIGH only when the provided release-note documents explicitly describe breaking changes, removals, required migration, or severe regressions.
+            If evidence is limited or ambiguous, prefer MEDIUM over HIGH.
         """.trimIndent()
         val userPrompt = """
             Upgrade alias: ${target.change.alias}
             Previous version: ${target.change.previousVersion}
             Current version: ${target.change.currentVersion}
+            Version change scope: $versionChangeScope
             Upgrade kind: ${target.kind}
             Usages: $usages
 
@@ -210,16 +221,17 @@ class OpenRouterReportGenerator(
                 ),
                 "riskLevel" to mapOf(
                     "type" to "string",
+                    "description" to "Risk level based only on explicit evidence from the provided release-note documents and upgrade metadata. Prefer MEDIUM over HIGH when evidence is limited.",
                     "enum" to listOf("LOW", "MEDIUM", "HIGH", "UNKNOWN"),
                 ),
                 "riskSummary" to mapOf(
                     "type" to "string",
-                    "description" to "One concise sentence justifying the risk level.",
+                    "description" to "One concise sentence justifying the risk level using only explicit evidence from the provided release-note documents. Do not mention breaking changes unless the documents explicitly describe them.",
                 ),
                 "riskSignals" to mapOf(
                     "type" to "array",
                     "items" to mapOf("type" to "string"),
-                    "description" to "Short machine-readable risk signals such as breaking-change, plugin-upgrade, concurrency-change, build-tooling, etc.",
+                    "description" to "Short machine-readable risk signals directly supported by the provided release-note documents, such as breaking-change, removed-api, migration-required, concurrency-change, build-tooling. Do not invent unsupported signals.",
                 ),
             ),
             "required" to listOf(
@@ -231,6 +243,37 @@ class OpenRouterReportGenerator(
                 "riskSignals",
             ),
         )
+    }
+
+    private fun describeVersionChangeScope(
+        previousVersion: String,
+        currentVersion: String,
+    ): String {
+        val previous = VersionSelection.parse(previousVersion)
+        val current = VersionSelection.parse(currentVersion)
+        if (previous == null || current == null) {
+            return "unknown"
+        }
+
+        val previousMajor = previous.coreParts.getOrElse(0) { 0 }
+        val currentMajor = current.coreParts.getOrElse(0) { 0 }
+        if (previousMajor != currentMajor) {
+            return "major"
+        }
+
+        val previousMinor = previous.coreParts.getOrElse(1) { 0 }
+        val currentMinor = current.coreParts.getOrElse(1) { 0 }
+        if (previousMinor != currentMinor) {
+            return "minor"
+        }
+
+        val previousPatch = previous.coreParts.getOrElse(2) { 0 }
+        val currentPatch = current.coreParts.getOrElse(2) { 0 }
+        if (previousPatch != currentPatch) {
+            return "patch"
+        }
+
+        return "same-series"
     }
 
     private fun parseRiskLevel(value: String): RiskLevel {
