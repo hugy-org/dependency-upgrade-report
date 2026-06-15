@@ -48,7 +48,7 @@ data class InferenceConfig(
 
 
 enum class LLMMode {
-    STATIC, OPENROUTER
+    STATIC, OPENROUTER, OLLAMA
 }
 
 data class LlmConfig(
@@ -62,13 +62,14 @@ data class LlmConfig(
     val requestTimeoutMs: Long = 45_000,
 ) {
     init {
-        if (mode == LLMMode.OPENROUTER) {
+        if (mode == LLMMode.OPENROUTER || mode == LLMMode.OLLAMA) {
             require(model?.isNotBlank() == true) { "Model must be not empty when LLM mode is $mode" }
+        }
+        if (mode == LLMMode.OPENROUTER) {
             require(apiKey?.isNotBlank() == true || apiKeyEnv?.isNotBlank() == true) {
                 "Either apiKey or apiKeyEnv must be set when mode is $mode"
             }
         }
-
     }
 
     fun resolveApiKey(environment: Map<String, String> = System.getenv()): String? {

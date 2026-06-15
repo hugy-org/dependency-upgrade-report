@@ -217,15 +217,15 @@ inference:
   mavenRepositoryBaseUrl: https://repo1.maven.org/maven2 # Maven repository used for POM lookup.
 
 llm:
-  mode: static # Use 'static' for deterministic summaries or 'openrouter' for LLM enrichment.
-  model: openai/gpt-4.1-mini # Model name for OpenRouter mode.
-  # Optional local override. Prefer apiKeyEnv in CI.
+  mode: static # Use 'static', 'openrouter', or 'ollama'.
+  model: openai/gpt-4.1-mini # Model name for the selected LLM provider.
+  # Optional local override. Prefer apiKeyEnv in CI for OpenRouter.
   # apiKey: your-openrouter-api-key
   apiKeyEnv: OPENROUTER_API_KEY # Environment variable name holding the OpenRouter API key.
-  baseUrl: https://openrouter.ai/api/v1/chat/completions # OpenRouter chat completions endpoint.
-  retryCount: 3 # Retry count for transient OpenRouter failures.
-  retryDelayMs: 750 # Delay between OpenRouter retries in milliseconds.
-  requestTimeoutMs: 45000 # Timeout per OpenRouter request in milliseconds.
+  baseUrl: https://openrouter.ai/api/v1/chat/completions # Provider endpoint. For Ollama use http://localhost:11434/api/chat.
+  retryCount: 3 # Retry count for transient LLM request failures.
+  retryDelayMs: 750 # Delay between LLM retries in milliseconds.
+  requestTimeoutMs: 45000 # Timeout per LLM request in milliseconds.
 ```
 
 Rules:
@@ -238,6 +238,7 @@ Rules:
 - `llm.apiKeyEnv` is the preferred CI-friendly way to provide the OpenRouter API key from an environment variable
 - `llm.mode: static` produces deterministic summaries without LLM output
 - `llm.mode: openrouter` enables LLM enrichment and falls back to deterministic summaries on failure
+- `llm.mode: ollama` enables LLM enrichment through a local or self-hosted Ollama endpoint
 - `github.maxReleases` is the number of release notes to keep in the final selection
 - `github.pageSize` controls how many GitHub releases are requested per API page
 - `github.maxScanReleases` is the hard cap on how many releases may be scanned across all pages
@@ -252,9 +253,21 @@ Rules:
 Validation notes:
 
 - `github.maxReleases`, `github.pageSize`, and `github.maxScanReleases` must be greater than zero
-- `llm.mode: openrouter` requires a non-blank `model`
+- `llm.mode: openrouter` and `llm.mode: ollama` require a non-blank `model`
 - `llm.mode: openrouter` requires either `apiKey` or `apiKeyEnv`
 - if `apiKeyEnv` is used, the environment variable must still exist at runtime
+
+Ollama example:
+
+```yaml
+llm:
+  mode: ollama
+  model: qwen3-coder:30b
+  baseUrl: http://localhost:11434/api/chat
+  retryCount: 2
+  retryDelayMs: 500
+  requestTimeoutMs: 45000
+```
 
 Practical presets:
 

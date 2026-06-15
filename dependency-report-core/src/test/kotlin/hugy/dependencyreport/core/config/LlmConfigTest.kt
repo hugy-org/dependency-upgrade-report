@@ -2,6 +2,7 @@ package hugy.dependencyreport.core.config
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNull
 
 class LlmConfigTest {
@@ -37,5 +38,12 @@ class LlmConfigTest {
         )
 
         assertNull(config.resolveApiKey(emptyMap()))
+    }
+
+    @Test
+    fun `ollama mode requires non-blank model`() {
+        assertFailsWith<IllegalArgumentException> {
+            LlmConfig(mode = LLMMode.OLLAMA, model = " ")
+        }
     }
 }

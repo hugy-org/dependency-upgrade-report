@@ -34,8 +34,6 @@ class ReportRenderer {
 
     private fun renderCommitBody(entries: List<UpgradeReportEntry>): String {
         return buildString {
-            appendLine("Dependency update report")
-            appendLine()
             entries.forEach { entry ->
                 appendLine("- ${deterministicTitle(entry)}")
                 appendLine("  Release notes: ${targetVersionUrl(entry)}")

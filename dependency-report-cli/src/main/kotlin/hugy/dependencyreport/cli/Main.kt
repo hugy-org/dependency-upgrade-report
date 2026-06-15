@@ -9,6 +9,7 @@ import hugy.dependencyreport.core.config.LLMMode
 import hugy.dependencyreport.core.fetch.HttpReleaseDocumentFetcher
 import hugy.dependencyreport.core.json.ObjectMappers
 import hugy.dependencyreport.core.llm.LlmReportGenerator
+import hugy.dependencyreport.core.llm.OllamaReportGenerator
 import hugy.dependencyreport.core.llm.OpenRouterReportGenerator
 import hugy.dependencyreport.core.llm.StaticLlmReportGenerator
 import hugy.dependencyreport.core.report.DependencyReportGenerator
@@ -135,6 +136,7 @@ private fun createLlmGenerator(config: DependencyReportConfig): LlmReportGenerat
     return when (config.llm.mode) {
         LLMMode.STATIC -> StaticLlmReportGenerator()
         LLMMode.OPENROUTER -> OpenRouterReportGenerator(config.llm)
+        LLMMode.OLLAMA -> OllamaReportGenerator(config.llm)
     }
 }
 
