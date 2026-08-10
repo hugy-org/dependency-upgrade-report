@@ -16,6 +16,14 @@ class VersionComparator {
         return when {
             previous.isPreRelease && !current.isPreRelease -> VersionChangeClassification.UPGRADE
             !previous.isPreRelease && current.isPreRelease -> VersionChangeClassification.DOWNGRADE
+            previous.isPreRelease && current.isPreRelease -> {
+                val preReleaseComparison = comparePreRelease(previous.preReleaseComponents, current.preReleaseComponents)
+                when {
+                    preReleaseComparison < 0 -> VersionChangeClassification.UPGRADE
+                    preReleaseComparison > 0 -> VersionChangeClassification.DOWNGRADE
+                    else -> VersionChangeClassification.SAME
+                }
+            }
             else -> VersionChangeClassification.SAME
         }
     }
@@ -42,7 +50,15 @@ class VersionComparator {
         }
 
         val isPreRelease = preReleaseMatch != null
-        return ParsedVersion(numericComponents = numericComponents, isPreRelease = isPreRelease)
+        val preReleaseComponents = preReleaseMatch
+            ?.let { normalized.substring(it.range.first).trimStart('.', '-') }
+            ?.split('.', '-')
+            .orEmpty()
+        return ParsedVersion(
+            numericComponents = numericComponents,
+            isPreRelease = isPreRelease,
+            preReleaseComponents = preReleaseComponents,
+        )
     }
 
     private fun compareNumeric(previous: List<Int>, current: List<Int>): Int {
@@ -57,8 +73,27 @@ class VersionComparator {
         return 0
     }
 
+    private fun comparePreRelease(previous: List<String>, current: List<String>): Int {
+        val maxSize = maxOf(previous.size, current.size)
+        for (index in 0 until maxSize) {
+            val left = previous.getOrNull(index) ?: return -1
+            val right = current.getOrNull(index) ?: return 1
+            val leftNumber = left.toIntOrNull()
+            val rightNumber = right.toIntOrNull()
+            val comparison = when {
+                leftNumber != null && rightNumber != null -> leftNumber.compareTo(rightNumber)
+                leftNumber != null -> -1
+                rightNumber != null -> 1
+                else -> left.compareTo(right, ignoreCase = true)
+            }
+            if (comparison != 0) return comparison
+        }
+        return 0
+    }
+
     private data class ParsedVersion(
         val numericComponents: List<Int>,
         val isPreRelease: Boolean,
+        val preReleaseComponents: List<String>,
     )
 }

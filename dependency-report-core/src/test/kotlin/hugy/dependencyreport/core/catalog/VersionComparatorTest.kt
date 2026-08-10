@@ -25,6 +25,14 @@ class VersionComparatorTest {
     }
 
     @Test
+    fun `compares prerelease identifiers`() {
+        assertEquals(VersionChangeClassification.UPGRADE, comparator.classify("2.0.0-alpha.5", "2.0.0-alpha.6"))
+        assertEquals(VersionChangeClassification.DOWNGRADE, comparator.classify("2.0.0-rc.2", "2.0.0-rc.1"))
+        assertEquals(VersionChangeClassification.UPGRADE, comparator.classify("2.0.0-alpha.9", "2.0.0-beta.1"))
+        assertEquals(VersionChangeClassification.SAME, comparator.classify("2.0.0-alpha.5", "2.0.0-alpha.5"))
+    }
+
+    @Test
     fun `returns unknown when numeric components cannot be extracted`() {
         assertEquals(VersionChangeClassification.UNKNOWN, comparator.classify("main", "latest"))
     }
