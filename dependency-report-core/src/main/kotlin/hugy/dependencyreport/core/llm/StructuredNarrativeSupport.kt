@@ -21,7 +21,7 @@ internal object StructuredNarrativeSupport {
         .enable(JsonReadFeature.ALLOW_UNESCAPED_CONTROL_CHARS)
         .build()
 
-    fun buildStructuredPayload(model: String, request: LlmReportRequest): Map<String, Any> {
+    fun buildStructuredPayload(request: LlmReportRequest): Map<String, Any> {
         val documentsText = request.documents.joinToString("\n\n") { document ->
             buildString {
                 appendLine("Title: ${document.title}")
@@ -69,7 +69,6 @@ internal object StructuredNarrativeSupport {
         """.trimIndent()
 
         return mapOf(
-            "model" to model,
             "messages" to listOf(
                 mapOf("role" to "system", "content" to systemPrompt),
                 mapOf("role" to "user", "content" to userPrompt),

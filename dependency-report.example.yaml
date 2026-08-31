@@ -28,6 +28,7 @@ inference:
 llm:
   mode: openrouter # Use 'static' for deterministic summaries or 'openrouter' for LLM enrichment.
   model: openai/gpt-4.1-mini # Model name for OpenRouter mode.
+  fallbackModels: [] # Ordered fallback models tried by OpenRouter before this tool retries the request.
   # Optional local override. Prefer apiKeyEnv in CI.
   # apiKey: your-openrouter-api-key
   apiKeyEnv: OPENROUTER_API_KEY # Environment variable name holding the OpenRouter API key.

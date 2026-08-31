@@ -1,21 +1,13 @@
 [versions]
-# Language, Frameworks
-#kotlin = "2.2.21"
-#commons-io = "2.22.0"
-#azure-identity="1.15.3"
-
-spring-boot = "4.0.6"
-#kotlin = "2.4.0"
-detekt = "2.0.0-alpha.6"
-dependency-analysis="3.14.1"
-#google-api-services-gmail = "v1-rev20260428-2.0.0"
-## =================================================================================================================== #
-## Plugins
-#detekt = "2.0.0-alpha.3"
+google-cloud-spring-gcp = "8.1.1"
+google-cloud-libraries = "26.87.0"
+azure-identity = "1.18.5"
+cloud-sql-connector-r2dbc-postgres = "1.30.0"
+dependency-analysis = "3.19.1"
+sentry = "6.20.0"
+spotless = "8.10.1"
 
 
-
-# best practices for naming entries: https://blog.gradle.org/best-practices-naming-version-catalog-entries
 [libraries]
 google-cloud-spring-gcp-bom = { module = "com.google.cloud:spring-cloud-gcp-dependencies", version.ref = "google-cloud-spring-gcp" }
 google-cloud-libraries-bom = { module = "com.google.cloud:libraries-bom", version.ref = "google-cloud-libraries" }
@@ -26,9 +18,10 @@ spring-cloud-bom = { module = "org.springframework.cloud:spring-cloud-dependenci
 arrow-bom = { module = "io.arrow-kt:arrow-stack", version.ref = "arrow" }
 azure-identity = { module = "com.azure:azure-identity", version.ref = "azure-identity" }
 gitlab-detektGitlabReport = { module = "com.gitlab.cromefire:detekt-gitlab-report", version.ref = "detekt-gitlab-report" }
+detekt-api = { module = "dev.detekt:detekt-api", version.ref = "detekt" }
+detekt-test = { module = "dev.detekt:detekt-test", version.ref = "detekt" }
 google-cloudSqlConnectorR2dbcPostgres = { module = "com.google.cloud.sql:cloud-sql-connector-r2dbc-postgres", version.ref = "cloud-sql-connector-r2dbc-postgres" }
 commons-io = { module = "commons-io:commons-io", version.ref = "commons-io" }
-google-apiServicesGmail = { module = "com.google.apis:google-api-services-gmail", version.ref = "google-api-services-gmail" }
 hibernate-processor = { module = "org.hibernate.orm:hibernate-processor" }
 hypersistence-utilsHibernate71 = { module = "io.hypersistence:hypersistence-utils-hibernate-71", version.ref = "hypersistence-utils-hibernate-71" }
 javaluator = { module = "com.fathzer:javaluator", version.ref = "javaluator" }
@@ -48,6 +41,7 @@ springdoc-openapiStarterWebfluxUi = { module = "org.springdoc:springdoc-openapi-
 springdoc-openapiStarterWebmvcUi = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc-openapi-starter-webmvc-ui" }
 springmockk = { module = "com.ninja-squad:springmockk", version.ref = "springmockk" }
 strikt-bom = { module = "io.strikt:strikt-bom", version.ref = "strikt" }
+wiremock-standalone = { module = "org.wiremock:wiremock-standalone", version.ref = "wiremock" }
 zip4j = { module = "net.lingala.zip4j:zip4j", version.ref = "zip4j" }
 
 [plugins]
@@ -66,5 +60,3 @@ jib = { id = "com.google.cloud.tools.jib", version.ref = "jib" }
 sentry = { id = "io.sentry.jvm.gradle", version.ref = "sentry" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
 versionCatalogUpdate = { id = "nl.littlerobots.version-catalog-update", version.ref = "version-catalog-udpate" }
-
-

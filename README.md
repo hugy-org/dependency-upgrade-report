@@ -219,6 +219,7 @@ inference:
 llm:
   mode: static # Use 'static', 'openrouter', or 'ollama'.
   model: openai/gpt-4.1-mini # Model name for the selected LLM provider.
+  fallbackModels: [] # Ordered OpenRouter fallback models; leave empty for Ollama and static mode.
   # Optional local override. Prefer apiKeyEnv in CI for OpenRouter.
   # apiKey: your-openrouter-api-key
   apiKeyEnv: OPENROUTER_API_KEY # Environment variable name holding the OpenRouter API key.
@@ -238,6 +239,8 @@ Rules:
 - `llm.apiKeyEnv` is the preferred CI-friendly way to provide the OpenRouter API key from an environment variable
 - `llm.mode: static` produces deterministic summaries without LLM output
 - `llm.mode: openrouter` enables LLM enrichment and falls back to deterministic summaries on failure
+- `llm.fallbackModels` lists OpenRouter models in priority order after `llm.model`; the selected model is logged on success
+- OpenRouter tries the complete model chain within each request, and `retryCount` retries only after that request fails
 - `llm.mode: ollama` enables LLM enrichment through a local or self-hosted Ollama endpoint
 - `github.maxReleases` is the number of release notes to keep in the final selection
 - `github.pageSize` controls how many GitHub releases are requested per API page
@@ -254,6 +257,7 @@ Validation notes:
 
 - `github.maxReleases`, `github.pageSize`, and `github.maxScanReleases` must be greater than zero
 - `llm.mode: openrouter` and `llm.mode: ollama` require a non-blank `model`
+- `llm.fallbackModels` is supported only in OpenRouter mode and must not contain blank values
 - `llm.mode: openrouter` requires either `apiKey` or `apiKeyEnv`
 - if `apiKeyEnv` is used, the environment variable must still exist at runtime
 

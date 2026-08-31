@@ -23,7 +23,8 @@ class OllamaReportGenerator(
         logger.info {
             "Starting Ollama enrichment for alias=${request.target.change.alias} using model=$model with ${request.documents.size} document(s)"
         }
-        val payload = StructuredNarrativeSupport.buildStructuredPayload(model, request) + mapOf(
+        val payload = StructuredNarrativeSupport.buildStructuredPayload(request) + mapOf(
+            "model" to model,
             "stream" to false,
             "format" to StructuredNarrativeSupport.buildStructuredSchema(),
         )

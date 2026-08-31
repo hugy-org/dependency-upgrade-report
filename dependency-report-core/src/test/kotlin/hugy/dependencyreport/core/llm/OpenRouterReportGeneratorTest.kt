@@ -30,6 +30,7 @@ class OpenRouterReportGeneratorTest {
                 llmConfig = LlmConfig(
                     mode = LLMMode.OPENROUTER,
                     model = "openai/gpt-4.1-mini",
+                    fallbackModels = listOf("google/gemini-2.5-flash", "openrouter/free"),
                     apiKey = "test-key",
                     baseUrl = "http://127.0.0.1:${server.address.port}/api/v1/chat/completions",
                 ),
@@ -59,7 +60,12 @@ class OpenRouterReportGeneratorTest {
             assertEquals("MR summary", success.narrative.description)
             assertEquals("Bearer test-key", handler.authorizationHeader)
             assertTrue(handler.requestBody.contains("\"response_format\""))
-            assertTrue(handler.requestBody.contains("\"model\":\"openai/gpt-4.1-mini\""))
+            assertTrue(
+                handler.requestBody.contains(
+                    "\"models\":[\"openai/gpt-4.1-mini\",\"google/gemini-2.5-flash\",\"openrouter/free\"]",
+                ),
+            )
+            assertTrue(!handler.requestBody.contains("\"model\":"))
         } finally {
             server.stop(0)
         }
@@ -252,6 +258,7 @@ private class CapturingHandler(
         requestBody = exchange.requestBody.readAllBytes().toString(StandardCharsets.UTF_8)
         val response = """
             {
+              "model": "google/gemini-2.5-flash",
               "choices": [
                 {
                   "message": {

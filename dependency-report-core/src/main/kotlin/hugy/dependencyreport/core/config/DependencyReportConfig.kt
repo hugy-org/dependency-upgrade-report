@@ -54,6 +54,7 @@ enum class LLMMode {
 data class LlmConfig(
     val mode: LLMMode = LLMMode.STATIC,
     val model: String? = null,
+    val fallbackModels: List<String> = emptyList(),
     val apiKey: String? = null,
     val apiKeyEnv: String? = null,
     val baseUrl: String = "https://openrouter.ai/api/v1/chat/completions",
@@ -64,6 +65,10 @@ data class LlmConfig(
     init {
         if (mode == LLMMode.OPENROUTER || mode == LLMMode.OLLAMA) {
             require(model?.isNotBlank() == true) { "Model must be not empty when LLM mode is $mode" }
+        }
+        require(fallbackModels.all { it.isNotBlank() }) { "Fallback models must not contain blank values" }
+        require(mode == LLMMode.OPENROUTER || fallbackModels.isEmpty()) {
+            "Fallback models are supported only when LLM mode is OPENROUTER"
         }
         if (mode == LLMMode.OPENROUTER) {
             require(apiKey?.isNotBlank() == true || apiKeyEnv?.isNotBlank() == true) {

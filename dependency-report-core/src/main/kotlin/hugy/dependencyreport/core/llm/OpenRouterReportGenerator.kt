@@ -38,13 +38,18 @@ class OpenRouterReportGenerator(
                 logger.info { "Using OpenRouter API key from environment variable $envName" }
             }
         }
-        val payload = StructuredNarrativeSupport.buildStructuredPayload(model, request) + mapOf(
+        val modelRouting = if (llmConfig.fallbackModels.isEmpty()) {
+            mapOf("model" to model)
+        } else {
+            mapOf("models" to listOf(model) + llmConfig.fallbackModels)
+        }
+        val payload = StructuredNarrativeSupport.buildStructuredPayload(request) + modelRouting + mapOf(
             "response_format" to StructuredNarrativeSupport.buildStructuredResponseFormat(),
         )
         val attempts = llmConfig.retryCount.coerceAtLeast(1)
         var lastFailure: String? = null
         var httpRequest: String
-        var response : HttpResponse<String>
+        var response: HttpResponse<String>
         repeat(attempts) { attemptIndex ->
             try {
                 val attemptNumber = attemptIndex + 1
@@ -60,7 +65,7 @@ class OpenRouterReportGenerator(
                     .header("X-Title", "dependency-upgrade-report")
                     .timeout(Duration.ofMillis(llmConfig.requestTimeoutMs.coerceAtLeast(1)))
                     .build()
-                 response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
+                response = httpClient.send(httpRequest, HttpResponse.BodyHandlers.ofString())
                 if (response.statusCode() !in 200..299) {
                     lastFailure = "OpenRouter returned HTTP ${response.statusCode()}"
                     logger.warn {
@@ -86,7 +91,9 @@ class OpenRouterReportGenerator(
                         }
                         return@repeat
                     }
-                logger.info { "OpenRouter enrichment succeeded for alias=${request.target.change.alias}" }
+                logger.info {
+                    "OpenRouter enrichment succeeded for alias=${request.target.change.alias} using model=${apiResponse.model ?: model}"
+                }
                 return LlmGenerationResult.Success(
                     StructuredNarrativeSupport.parseStructuredNarrative(content, request),
                 )
@@ -143,6 +150,7 @@ class OpenRouterReportGenerator(
 @JsonIgnoreProperties(ignoreUnknown = true)
 private data class OpenRouterResponse(
     val choices: List<OpenRouterChoice> = emptyList(),
+    val model: String? = null,
 )
 
 @JsonIgnoreProperties(ignoreUnknown = true)

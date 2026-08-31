@@ -46,4 +46,22 @@ class LlmConfigTest {
             LlmConfig(mode = LLMMode.OLLAMA, model = " ")
         }
     }
+
+    @Test
+    fun `fallback models must be non-blank`() {
+        assertFailsWith<IllegalArgumentException> {
+            LlmConfig(fallbackModels = listOf("openrouter/free", " "))
+        }
+    }
+
+    @Test
+    fun `fallback models are restricted to openrouter mode`() {
+        assertFailsWith<IllegalArgumentException> {
+            LlmConfig(
+                mode = LLMMode.OLLAMA,
+                model = "qwen3-coder:30b",
+                fallbackModels = listOf("another-model"),
+            )
+        }
+    }
 }
